@@ -2,20 +2,20 @@
   <defs>
     <!-- Background Gradient -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f0c1b"/>
-      <stop offset="100%" stop-color="#05020a"/>
+      <stop offset="0%" stop-color="#2c2c2e"/>
+      <stop offset="100%" stop-color="#1c1c1e"/>
     </linearGradient>
     
     <!-- Bubble 1 Gradient (Left/Top - English "A") -->
     <linearGradient id="bubbleEng" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#a855f7"/>
-      <stop offset="100%" stop-color="#6366f1"/>
+      <stop offset="0%" stop-color="#2997ff"/>
+      <stop offset="100%" stop-color="#0055ff"/>
     </linearGradient>
     
     <!-- Bubble 2 Gradient (Right/Bottom - Chinese "文") -->
     <linearGradient id="bubbleChi" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ec4899"/>
-      <stop offset="100%" stop-color="#f43f5e"/>
+      <stop offset="0%" stop-color="#00d2c4"/>
+      <stop offset="100%" stop-color="#007d75"/>
     </linearGradient>
     
     <!-- Shadow Filter -->

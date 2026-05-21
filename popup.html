@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AuraTranslate</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -17,12 +14,12 @@
         <img src="icon.svg" alt="AuraTranslate Logo" class="logo">
         <div class="title-group">
           <h1>AuraTranslate</h1>
-          <span class="badge">V3 Engine</span>
+          <span class="badge">Active</span>
         </div>
       </div>
       <div class="power-btn-wrapper">
         <button id="powerBtn" class="power-btn" title="Toggle Translation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0">
             <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
@@ -55,7 +52,7 @@
         </div>
         
         <div class="swap-icon" id="swapLangs">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 10H3M3 10L7 6M3 10L7 14M7 14H21M21 14L17 18M21 14L17 10"/>
           </svg>
         </div>
@@ -82,7 +79,7 @@
       <div class="setting-row">
         <div class="setting-info">
           <div class="setting-label">Auto-Translate Site</div>
-          <div class="setting-desc">Automatically translate when page loads</div>
+          <div class="setting-desc">Automatically translate on page load</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="autoTranslate">
@@ -94,7 +91,7 @@
       <div class="setting-row">
         <div class="setting-info">
           <div class="setting-label">Hover for Original</div>
-          <div class="setting-desc">Hover translated text to see original Chinese</div>
+          <div class="setting-desc">Hover translated text to see Chinese</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="hoverOriginal" checked>
@@ -107,7 +104,7 @@
     <div class="section stats-grid">
       <div class="stat-box">
         <div class="stat-val" id="statTranslated">0</div>
-        <div class="stat-lbl">Elements Translated</div>
+        <div class="stat-lbl">Translated</div>
       </div>
       <div class="stat-box">
         <div class="stat-val" id="statCached">0</div>
@@ -118,14 +115,14 @@
     <!-- Action Buttons -->
     <div class="action-footer">
       <button id="translateBtn" class="btn primary-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" class="btn-icon">
           <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         Translate Page
       </button>
       
       <button id="resetBtn" class="btn secondary-btn" title="Reset Translation">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="btn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" class="btn-icon">
           <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         Restore Original

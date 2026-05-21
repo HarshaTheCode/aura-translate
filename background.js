@@ -159,58 +159,61 @@ async function translateTextList(texts, sourceLang, targetLang) {
     
     // We want to reconstruct the translations.
     // Sometimes Google Translate groups segments or splits them slightly differently.
-    // Let's build a map of original segment -> translated segment.
-    const segmentMap = new Map();
+    // Let's build a map of original segment -> translated segment using a robust alignment system.
+    const alignmentMap = new Map();
+    
+    // Also reconstruct the full text block and split it by newlines to see if it matches text count
+    const fullTranslatedText = segments.map(seg => seg[0] || '').join('');
+    const splitTranslations = fullTranslatedText.split('\n');
+
     segments.forEach(seg => {
       if (seg && seg[0] !== null && seg[1] !== null) {
         const trans = seg[0];
         const orig = seg[1];
         
-        // Trim and lowercase key for robust matching
-        const cleanOrig = orig.trim();
-        if (cleanOrig) {
-          if (segmentMap.has(cleanOrig)) {
-            segmentMap.set(cleanOrig, segmentMap.get(cleanOrig) + trans);
-          } else {
-            segmentMap.set(cleanOrig, trans);
+        // 1. If both contain newlines, attempt line-by-line alignment
+        if (orig.includes('\n') || trans.includes('\n')) {
+          const origLines = orig.split('\n');
+          const transLines = trans.split('\n');
+          
+          if (origLines.length === transLines.length) {
+            for (let i = 0; i < origLines.length; i++) {
+              const o = origLines[i].trim();
+              const t = transLines[i].trim();
+              if (o) {
+                alignmentMap.set(o.toLowerCase(), t);
+              }
+            }
           }
+        }
+        
+        // 2. Map the entire segment as is
+        const o = orig.trim();
+        const t = trans.trim();
+        if (o) {
+          alignmentMap.set(o.toLowerCase(), t);
         }
       }
     });
 
-    // Also reconstruct the full text block and split it by newlines to see if it matches text count
-    const fullTranslatedText = segments.map(seg => seg[0] || '').join('');
-    const splitTranslations = fullTranslatedText.split('\n');
-
     // Return mapped results
     return texts.map((originalText, idx) => {
-      const cleanOriginal = originalText.trim();
+      const cleanOriginal = originalText.trim().toLowerCase();
       
-      // 1. Try mapping via the exact segment map
-      if (segmentMap.has(cleanOriginal)) {
-        return segmentMap.get(cleanOriginal);
+      // 1. Try mapping via the exact/aligned map
+      if (alignmentMap.has(cleanOriginal)) {
+        return alignmentMap.get(cleanOriginal);
       }
       
-      // 2. Try case/space insensitive matching
-      for (const [origKey, transVal] of segmentMap.entries()) {
-        if (origKey.toLowerCase() === cleanOriginal.toLowerCase()) {
-          return transVal;
-        }
-      }
-
-      // 3. Fallback to index-based split if length matches
+      // 2. Try index-based fallback if total line count matches perfectly
       if (splitTranslations.length === texts.length) {
-        return splitTranslations[idx] || originalText;
-      }
-
-      // 4. Try matching parts
-      for (const [origKey, transVal] of segmentMap.entries()) {
-        if (cleanOriginal.includes(origKey) || origKey.includes(cleanOriginal)) {
-          return transVal;
+        const fallbackVal = splitTranslations[idx];
+        if (fallbackVal !== undefined) {
+          return fallbackVal.trim();
         }
       }
 
-      // 5. Ultimate fallback: original text
+      // 3. Ultimate fallback: original text (prevents repeating-word bugs)
       return originalText;
     });
 

@@ -28,12 +28,12 @@
   styleElement.id = 'aura-translate-styles';
   styleElement.textContent = `
     [data-aura-translated="true"] {
-      text-decoration: underline dotted rgba(168, 85, 247, 0.3) !important;
+      text-decoration: underline dotted rgba(10, 132, 255, 0.3) !important;
       text-underline-offset: 3px !important;
       transition: text-decoration-color 0.2s !important;
     }
     [data-aura-translated="true"]:hover {
-      text-decoration-color: rgba(168, 85, 247, 0.85) !important;
+      text-decoration-color: rgba(10, 132, 255, 0.85) !important;
     }
   `;
 
@@ -185,28 +185,21 @@
       
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
-          // Verify it's an element node or a text node
           if (node.nodeType === Node.ELEMENT_NODE) {
-            // Check if node is not script/style and not already translated
-            const tag = node.tagName.toLowerCase();
-            if (!['script', 'style', 'code', 'pre', 'textarea', 'input', 'noscript'].includes(tag)) {
-              queueNodeForTranslation(node);
+            queueNodeForTranslation(node);
+            addedNodesDetected = true;
+          } else if (node.nodeType === Node.TEXT_NODE) {
+            if (shouldTranslateNode(node)) {
+              queueTextNode(node);
               addedNodesDetected = true;
             }
-          } else if (node.nodeType === Node.TEXT_NODE) {
-            queueTextNode(node);
-            addedNodesDetected = true;
           }
         }
         
-        // Also check if text content of existing text node was changed (some frameworks modify text nodes directly)
+        // Also check if text content of existing text node was changed
         if (mutation.type === 'characterData' && mutation.target.nodeType === Node.TEXT_NODE) {
           const textNode = mutation.target;
-          const val = textNode.nodeValue;
-          
-          // Verify we didn't trigger this change ourselves
-          const info = translatedNodes.get(textNode);
-          if (!info || info.translated !== val) {
+          if (shouldTranslateNode(textNode)) {
             queueTextNode(textNode);
             addedNodesDetected = true;
           }
@@ -232,6 +225,41 @@
     processQueueImmediately();
   }
 
+  // Determines if a text node should be translated
+  function shouldTranslateNode(node) {
+    if (!node || node.nodeType !== Node.TEXT_NODE) return false;
+    const parent = node.parentElement;
+    if (!parent) return false;
+    
+    const tag = parent.tagName.toLowerCase();
+    if (['script', 'style', 'code', 'pre', 'textarea', 'input', 'noscript'].includes(tag)) {
+      return false;
+    }
+
+    const textVal = node.nodeValue;
+    if (!textVal || !textVal.trim()) {
+      return false;
+    }
+
+    // Skip numbers and symbols
+    if (/^[0-9\s\p{P}\p{S}]+$/u.test(textVal)) {
+      return false;
+    }
+
+    // If source language is Chinese, verify it contains Chinese characters
+    if ((sourceLang === 'auto' || sourceLang.startsWith('zh')) && !/[\u4e00-\u9fa5]/.test(textVal)) {
+      return false;
+    }
+
+    // Already translated node? Check if it has the same text value
+    const info = translatedNodes.get(node);
+    if (info && info.translated === textVal) {
+      return false;
+    }
+
+    return true;
+  }
+
   // Traverse DOM and find all target text nodes under an element
   function queueNodeForTranslation(element) {
     const walker = document.createTreeWalker(
@@ -239,41 +267,7 @@
       NodeFilter.SHOW_TEXT,
       {
         acceptNode: function(node) {
-          const parent = node.parentElement;
-          if (!parent) return NodeFilter.FILTER_REJECT;
-          
-          const tag = parent.tagName.toLowerCase();
-          if (['script', 'style', 'code', 'pre', 'textarea', 'input', 'noscript'].includes(tag)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-          
-          // Skip if parent is marked as translated or already in progress
-          if (parent.getAttribute('data-aura-translated') === 'true') {
-            return NodeFilter.FILTER_REJECT;
-          }
-
-          const textVal = node.nodeValue;
-          if (!textVal || !textVal.trim()) {
-            return NodeFilter.FILTER_REJECT;
-          }
-
-          // Skip numbers and symbols
-          if (/^[0-9\s\p{P}\p{S}]+$/u.test(textVal)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-
-          // If source language is Chinese, verify it contains Chinese characters
-          if ((sourceLang === 'auto' || sourceLang.startsWith('zh')) && !/[\u4e00-\u9fa5]/.test(textVal)) {
-            return NodeFilter.FILTER_REJECT;
-          }
-
-          // Already translated node? Check if it has a different text value
-          const info = translatedNodes.get(node);
-          if (info && info.translated === textVal) {
-            return NodeFilter.FILTER_REJECT;
-          }
-
-          return NodeFilter.FILTER_ACCEPT;
+          return shouldTranslateNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
         }
       }
     );
@@ -296,7 +290,7 @@
     if (queueTimeout) clearTimeout(queueTimeout);
     queueTimeout = setTimeout(() => {
       processQueueImmediately();
-    }, 250); // 250ms batching delay
+    }, 80); // 80ms batching delay for instant feedback
   }
 
   // Process the translation queue
