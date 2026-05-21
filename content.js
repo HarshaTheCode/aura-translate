@@ -143,11 +143,18 @@
     isEnabled = true;
     reportTabState('translating');
 
-    // 1. Scan page and translate existing text nodes
-    scanAndTranslateDOM(document.body);
-
-    // 2. Set up MutationObserver to translate new dynamic elements
-    setupMutationObserver();
+    // Safety: If document.body is not ready yet, wait for DOMContentLoaded
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (isEnabled && document.body) {
+          scanAndTranslateDOM(document.body);
+          setupMutationObserver();
+        }
+      }, { once: true });
+    } else {
+      scanAndTranslateDOM(document.body);
+      setupMutationObserver();
+    }
   }
 
   // Turn translation off (Restore original texts)
