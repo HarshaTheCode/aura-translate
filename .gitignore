@@ -1,0 +1,7 @@
+# OS Metadata
+.DS_Store
+Thumbs.db
+
+# Chrome extension local metadata
+*.crx
+*.pem
