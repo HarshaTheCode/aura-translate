@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="banner.png" alt="AuraTranslate Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px;">
+  <img src="banner.png" alt="AuraTranslate Banner" width="480" style="border-radius: 12px; margin-bottom: 20px; max-width: 100%;">
   
   # 🌐 AuraTranslate
   
@@ -14,6 +14,15 @@
 ---
 
 **AuraTranslate** is a lightweight, premium browser extension that translates web pages dynamically in real-time. Built specifically for complex, dynamic modern web applications (like Tencent Hunyuan Video), it intercepts new elements as they enter the screen and instantly replaces Chinese text with clean, contextual English translations without breaking React, Vue, or vanilla page structures.
+
+## 📺 Demo Video
+
+<div align="center">
+  <video src="demo.mp4" width="100%" controls muted autoplay loop style="border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); max-width: 600px;"></video>
+  <p><sub><i>Record a 30-second screen capture of the extension in action, name it <code>demo.mp4</code>, and save it in the root folder to showcase it here!</i></sub></p>
+</div>
+
+---
 
 ## 🚀 Key Features
 
