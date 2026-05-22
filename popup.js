@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const targetLangSelect = document.getElementById('targetLang');
   const swapLangsBtn = document.getElementById('swapLangs');
   const autoTranslateCheck = document.getElementById('autoTranslate');
+  const bilingualModeCheck = document.getElementById('bilingualMode');
   const hoverOriginalCheck = document.getElementById('hoverOriginal');
   const statTranslatedVal = document.getElementById('statTranslated');
   const statCachedVal = document.getElementById('statCached');
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       versionText.textContent = 'v' + chrome.runtime.getManifest().version;
     } catch (e) {
-      versionText.textContent = 'v1.1.0';
+      versionText.textContent = 'v1.2.0';
     }
   }
 
@@ -36,10 +37,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Load global configurations
-  chrome.storage.local.get(['sourceLang', 'targetLang', 'autoTranslate', 'hoverOriginal'], (data) => {
+  chrome.storage.local.get(['sourceLang', 'targetLang', 'autoTranslate', 'bilingualMode', 'hoverOriginal'], (data) => {
     if (data.sourceLang) sourceLangSelect.value = data.sourceLang;
     if (data.targetLang) targetLangSelect.value = data.targetLang;
     if (data.autoTranslate !== undefined) autoTranslateCheck.checked = data.autoTranslate;
+    if (data.bilingualMode !== undefined) bilingualModeCheck.checked = data.bilingualMode;
     if (data.hoverOriginal !== undefined) hoverOriginalCheck.checked = data.hoverOriginal;
     
     updateCacheStats();
@@ -187,6 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         action: action,
         sourceLang: sourceLangSelect.value,
         targetLang: targetLangSelect.value,
+        bilingualMode: bilingualModeCheck.checked,
         hoverOriginal: hoverOriginalCheck.checked
       });
     } catch (err) {
@@ -207,6 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         action: 'enableTranslation',
         sourceLang: sourceLangSelect.value,
         targetLang: targetLangSelect.value,
+        bilingualMode: bilingualModeCheck.checked,
         hoverOriginal: hoverOriginalCheck.checked,
         force: true
       });
@@ -236,9 +240,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tgt = targetLangSelect.value;
     
     if (src === 'auto') {
-      // Cannot swap "auto" directly, default to English as source if swapped
+      // Cannot swap "auto" directly, use target as new source, default target to English
       sourceLangSelect.value = tgt;
-      targetLangSelect.value = 'zh-CN';
+      targetLangSelect.value = 'en';
     } else {
       sourceLangSelect.value = tgt;
       targetLangSelect.value = src;
@@ -253,10 +257,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       sourceLang: sourceLangSelect.value,
       targetLang: targetLangSelect.value,
       autoTranslate: autoTranslateCheck.checked,
+      bilingualMode: bilingualModeCheck.checked,
       hoverOriginal: hoverOriginalCheck.checked
     });
     
-    // Notify active tab about configuration changes (e.g. if hover option changed)
+    // Notify active tab about configuration changes
     if (activeTab) {
       sendMessageToTab({
         action: 'settingsChanged',
@@ -264,6 +269,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           sourceLang: sourceLangSelect.value,
           targetLang: targetLangSelect.value,
           autoTranslate: autoTranslateCheck.checked,
+          bilingualMode: bilingualModeCheck.checked,
           hoverOriginal: hoverOriginalCheck.checked
         }
       }).catch(() => {});
@@ -284,6 +290,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   hoverOriginalCheck.addEventListener('change', saveSettings);
+  bilingualModeCheck.addEventListener('change', saveSettings);
 
   // Tab elements
   const tabBtnTranslate = document.getElementById('tabBtnTranslate');

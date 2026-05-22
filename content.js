@@ -9,6 +9,7 @@
   let sourceLang = 'auto';
   let targetLang = 'en';
   let hoverOriginal = true;
+  let bilingualMode = false;
   
   // Translation stats for the current tab
   let translatedCount = 0;
@@ -112,6 +113,24 @@
       word-break: break-word;
       user-select: text;
     }
+    .aura-bilingual-line {
+      display: block;
+      font-size: 0.88em;
+      line-height: 1.5;
+      color: #5aadff;
+      font-style: italic;
+      margin-top: 2px;
+      padding: 2px 0;
+      opacity: 0.92;
+      border-left: 2px solid rgba(10, 132, 255, 0.4);
+      padding-left: 6px;
+      font-family: inherit;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    [data-aura-translated="true"]:hover .aura-bilingual-line {
+      opacity: 1;
+    }
   `;
 
   // Initialize content script
@@ -130,12 +149,14 @@
       'sourceLang',
       'targetLang',
       'autoTranslate',
+      'bilingualMode',
       'hoverOriginal',
       `auto_${domain}`
     ], (data) => {
       if (data.sourceLang) sourceLang = data.sourceLang;
       if (data.targetLang) targetLang = data.targetLang;
       if (data.hoverOriginal !== undefined) hoverOriginal = data.hoverOriginal;
+      if (data.bilingualMode !== undefined) bilingualMode = data.bilingualMode;
       
       const isAutoForDomain = data[`auto_${domain}`] || false;
       const isGlobalAuto = data.autoTranslate || false;
@@ -154,6 +175,7 @@
         sourceLang = request.sourceLang || sourceLang;
         targetLang = request.targetLang || targetLang;
         hoverOriginal = request.hoverOriginal !== undefined ? request.hoverOriginal : hoverOriginal;
+        bilingualMode = request.bilingualMode !== undefined ? request.bilingualMode : bilingualMode;
         
         enableTranslation(request.force);
         sendResponse({ success: true });
@@ -164,19 +186,23 @@
       }
       else if (request.action === 'settingsChanged') {
         const settings = request.settings;
+        const oldSourceLang = sourceLang;
+        const oldTargetLang = targetLang;
+        const oldBilingualMode = bilingualMode;
         sourceLang = settings.sourceLang || sourceLang;
         targetLang = settings.targetLang || targetLang;
         
         const oldHover = hoverOriginal;
         hoverOriginal = settings.hoverOriginal !== undefined ? settings.hoverOriginal : hoverOriginal;
+        bilingualMode = settings.bilingualMode !== undefined ? settings.bilingualMode : bilingualMode;
         
         if (isEnabled) {
           // If translation is active, adjust hover styles or languages dynamically
           if (oldHover !== hoverOriginal) {
             updateHoverTooltips();
           }
-          // Re-translate page if target language changed
-          if (settings.targetLang !== targetLang || settings.sourceLang !== sourceLang) {
+          // Re-translate page if source/target language or bilingual mode changed
+          if (oldTargetLang !== targetLang || oldSourceLang !== sourceLang || oldBilingualMode !== bilingualMode) {
             disableTranslation();
             enableTranslation(true);
           }
@@ -358,6 +384,11 @@
       return false;
     }
 
+    // Skip our own bilingual annotation elements to prevent infinite re-translation
+    if (parent.hasAttribute('data-aura-bilingual') || parent.closest('[data-aura-bilingual]')) {
+      return false;
+    }
+
     const textVal = node.nodeValue;
     if (!textVal || !textVal.trim()) {
       return false;
@@ -368,8 +399,8 @@
       return false;
     }
 
-    // If source language is Chinese, verify it contains Chinese characters
-    if ((sourceLang === 'auto' || sourceLang.startsWith('zh')) && !/[\u4e00-\u9fa5]/.test(textVal)) {
+    // If source language is explicitly set to Chinese, verify it contains Chinese characters
+    if (sourceLang.startsWith('zh') && !/[\u4e00-\u9fa5]/.test(textVal)) {
       return false;
     }
 
@@ -501,20 +532,37 @@
 
       // Store node mapping
       translatedNodes.set(node, { original: originalText, translated: translatedText });
-
-      // Safely apply translation to nodeValue (prevents React crashes)
-      node.nodeValue = translatedText;
       translatedCount++;
 
-      // Update parent element attributes for hover/tooltip features
       const parent = node.parentElement;
-      if (parent) {
-        parent.setAttribute('data-aura-translated', 'true');
-        parent.setAttribute('data-aura-original', originalText);
-        
-        if (hoverOriginal) {
-          parent.setAttribute('title', `Original: ${originalText}`);
-          parent.setAttribute('data-aura-title-added', 'true');
+
+      if (bilingualMode) {
+        // Bilingual mode: keep original text, append translation below
+        if (parent) {
+          parent.setAttribute('data-aura-translated', 'true');
+          parent.setAttribute('data-aura-original', originalText);
+          
+          // Create the bilingual translation annotation
+          const bilingualSpan = document.createElement('span');
+          bilingualSpan.className = 'aura-bilingual-line';
+          bilingualSpan.textContent = translatedText;
+          bilingualSpan.setAttribute('data-aura-bilingual', 'true');
+          
+          // Insert the bilingual annotation after the parent element's content
+          parent.appendChild(bilingualSpan);
+        }
+      } else {
+        // Standard mode: replace text
+        node.nodeValue = translatedText;
+
+        if (parent) {
+          parent.setAttribute('data-aura-translated', 'true');
+          parent.setAttribute('data-aura-original', originalText);
+          
+          if (hoverOriginal) {
+            parent.setAttribute('title', `Original: ${originalText}`);
+            parent.setAttribute('data-aura-title-added', 'true');
+          }
         }
       }
     });
@@ -544,9 +592,17 @@
 
   // Reverts all text node modifications and cleans up parent attributes
   function restoreOriginalDOM() {
+    // Remove all bilingual annotation spans first
+    const bilingualSpans = document.querySelectorAll('[data-aura-bilingual="true"]');
+    bilingualSpans.forEach(span => {
+      if (span.parentNode) {
+        span.parentNode.removeChild(span);
+      }
+    });
+
     const elements = document.querySelectorAll('[data-aura-translated="true"]');
     elements.forEach(el => {
-      // Find all text node children
+      // Find all text node children and restore originals
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       let node;
       while (node = walker.nextNode()) {

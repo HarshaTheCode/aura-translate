@@ -261,6 +261,14 @@ body {
   color: var(--text-primary);
 }
 
+.select-wrapper select optgroup {
+  background-color: var(--bg-main);
+  color: var(--text-secondary);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 11px;
+}
+
 .version-badge {
   font-size: 10px;
   font-weight: 500;
