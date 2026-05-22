@@ -62,11 +62,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const domain = cleanUrl.hostname;
 
     // Check if auto-translate is configured for this domain
-    chrome.storage.local.get([`auto_${domain}`, `tabState_${activeTab.id}`], (data) => {
+    chrome.storage.local.get([`auto_${domain}`, `tabState_${activeTab.id}`], async (data) => {
       const isAutoForDomain = data[`auto_${domain}`] || false;
       const tabState = data[`tabState_${activeTab.id}`] || { enabled: false, translatedCount: 0, status: 'ready' };
       
+      // Update UI immediately with stored state to avoid lag
       updateUIStatus(tabState.enabled, tabState.status, tabState.translatedCount);
+
+      // Query the live content script for real-time state sync
+      try {
+        const liveState = await sendMessageToTab({ action: 'getTabState' });
+        if (liveState) {
+          updateUIStatus(liveState.enabled, liveState.status, liveState.translatedCount);
+          chrome.storage.local.set({
+            [`tabState_${activeTab.id}`]: liveState
+          });
+        }
+      } catch (err) {
+        console.log("Could not query live state from tab:", err.message);
+      }
     });
   } else {
     // No active tab or access
@@ -269,13 +283,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load and render starred phrases
   function loadStarredPhrases() {
-    chrome.runtime.sendMessage({ action: 'getStarred' }, (response) => {
-      if (response && response.success && response.phrases && response.phrases.length > 0) {
-        renderPhraseList(response.phrases);
-      } else {
-        renderEmptyState();
-      }
-    });
+    renderSkeletons(3);
+    
+    // Tiny delay to make the premium skeleton transition visible and smooth
+    setTimeout(() => {
+      chrome.runtime.sendMessage({ action: 'getStarred' }, (response) => {
+        if (response && response.success && response.phrases && response.phrases.length > 0) {
+          renderPhraseList(response.phrases);
+        } else {
+          renderEmptyState();
+        }
+      });
+    }, 150);
+  }
+
+  function renderSkeletons(count) {
+    phraseList.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const skeleton = document.createElement('div');
+      skeleton.className = 'skeleton-item';
+      phraseList.appendChild(skeleton);
+    }
   }
 
   function renderEmptyState() {

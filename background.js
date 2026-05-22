@@ -130,8 +130,14 @@ async function clearAllStarred() {
   });
 }
 
-// Load cache migration from storage on startup
+// Load cache migration and register context menus on startup
 chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: "translate-page",
+    title: "Translate this page with AuraTranslate",
+    contexts: ["page"]
+  });
+
   chrome.storage.local.get(['translationCache'], (data) => {
     if (data.translationCache) {
       openDB().then(async (db) => {
@@ -147,8 +153,39 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+// Context Menu Click Listener
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === "translate-page" && tab && tab.id) {
+    chrome.tabs.sendMessage(tab.id, {
+      action: "enableTranslation",
+      force: true
+    }).catch(err => {
+      chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      }).then(() => {
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tab.id, {
+            action: "enableTranslation",
+            force: true
+          }).catch(e => console.error("Failed to enable translation after injection:", e));
+        }, 120);
+      }).catch(e => console.error("Failed to inject content script from context menu:", e));
+    });
+  }
+});
+
 // Listener for messages from popup or content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'tabStateUpdated') {
+    if (sender.tab && sender.tab.id) {
+      chrome.storage.local.set({
+        [`tabState_${sender.tab.id}`]: request.state
+      });
+    }
+    return false;
+  }
+
   if (request.action === 'translateBatch') {
     handleBatchTranslation(request.texts, request.sourceLang, request.targetLang)
       .then(translations => {

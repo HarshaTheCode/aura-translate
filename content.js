@@ -205,15 +205,6 @@
     }).catch(() => {
       // Ignore errors when popup is closed
     });
-
-    // Also store in local storage so popup can read it even if loaded after status changes
-    chrome.tabs?.getCurrent?.((tab) => {
-      if (tab) {
-        chrome.storage.local.set({
-          [`tabState_${tab.id}`]: { enabled: isEnabled, translatedCount, status }
-        });
-      }
-    });
   }
 
   // Turn translation on
