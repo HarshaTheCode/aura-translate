@@ -119,6 +119,17 @@ async function getStarredPhrases() {
   });
 }
 
+async function clearAllStarred() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('phrasebook', 'readwrite');
+    const store = transaction.objectStore('phrasebook');
+    const request = store.clear();
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
 // Load cache migration from storage on startup
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(['translationCache'], (data) => {
@@ -194,6 +205,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getStarred') {
     getStarredPhrases()
       .then(phrases => sendResponse({ success: true, phrases }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (request.action === 'clearStarred') {
+    clearAllStarred()
+      .then(() => sendResponse({ success: true }))
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }

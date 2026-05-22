@@ -241,4 +241,160 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   hoverOriginalCheck.addEventListener('change', saveSettings);
+
+  // Tab elements
+  const tabBtnTranslate = document.getElementById('tabBtnTranslate');
+  const tabBtnPhrasebook = document.getElementById('tabBtnPhrasebook');
+  const panelTranslate = document.getElementById('panelTranslate');
+  const panelPhrasebook = document.getElementById('panelPhrasebook');
+  const phraseList = document.getElementById('phraseList');
+  const clearStarredBtn = document.getElementById('clearStarredBtn');
+
+  // Tab switching
+  tabBtnTranslate.addEventListener('click', () => {
+    tabBtnTranslate.classList.add('active');
+    tabBtnPhrasebook.classList.remove('active');
+    panelTranslate.classList.add('active');
+    panelPhrasebook.classList.remove('active');
+    updateCacheStats();
+  });
+
+  tabBtnPhrasebook.addEventListener('click', () => {
+    tabBtnPhrasebook.classList.add('active');
+    tabBtnTranslate.classList.remove('active');
+    panelPhrasebook.classList.add('active');
+    panelTranslate.classList.remove('active');
+    loadStarredPhrases();
+  });
+
+  // Load and render starred phrases
+  function loadStarredPhrases() {
+    chrome.runtime.sendMessage({ action: 'getStarred' }, (response) => {
+      if (response && response.success && response.phrases && response.phrases.length > 0) {
+        renderPhraseList(response.phrases);
+      } else {
+        renderEmptyState();
+      }
+    });
+  }
+
+  function renderEmptyState() {
+    phraseList.innerHTML = '<div class="empty-state">No saved phrases yet. Highlight text on a page to star and save translations.</div>';
+  }
+
+  function renderPhraseList(phrases) {
+    phraseList.innerHTML = '';
+    
+    // Sort phrases: newest first
+    phrases.sort((a, b) => b.timestamp - a.timestamp);
+
+    phrases.forEach((phrase) => {
+      const item = document.createElement('div');
+      item.className = 'phrase-item';
+      
+      const origText = phrase.originalText || '';
+      const transText = phrase.translatedText || '';
+
+      const textGroup = document.createElement('div');
+      textGroup.className = 'phrase-text-group';
+
+      const origDiv = document.createElement('div');
+      origDiv.className = 'phrase-orig';
+      origDiv.textContent = origText;
+      origDiv.title = origText;
+
+      const transDiv = document.createElement('div');
+      transDiv.className = 'phrase-trans';
+      transDiv.textContent = transText;
+      transDiv.title = transText;
+
+      textGroup.appendChild(origDiv);
+      textGroup.appendChild(transDiv);
+
+      const actionsGroup = document.createElement('div');
+      actionsGroup.className = 'phrase-actions';
+
+      // Copy Button
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'phrase-btn';
+      copyBtn.title = 'Copy Translation';
+      copyBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      `;
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(transText).then(() => {
+          // Success Feedback animation
+          copyBtn.style.color = 'var(--success)';
+          copyBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          `;
+          setTimeout(() => {
+            copyBtn.style.color = '';
+            copyBtn.innerHTML = `
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            `;
+          }, 1500);
+        }).catch((err) => {
+          console.error('Failed to copy text: ', err);
+        });
+      });
+
+      // Delete Button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'phrase-btn delete';
+      deleteBtn.title = 'Delete';
+      deleteBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      `;
+      deleteBtn.addEventListener('click', () => {
+        chrome.runtime.sendMessage({
+          action: 'removeStarred',
+          originalText: origText
+        }, (res) => {
+          if (res && res.success) {
+            // Animating item removal
+            item.style.opacity = '0';
+            item.style.transform = 'scale(0.95)';
+            item.style.transition = 'opacity 0.2s, transform 0.2s';
+            setTimeout(() => {
+              loadStarredPhrases();
+            }, 200);
+          } else {
+            console.error('Failed to remove starred phrase:', res ? res.error : 'No response');
+          }
+        });
+      });
+
+      actionsGroup.appendChild(copyBtn);
+      actionsGroup.appendChild(deleteBtn);
+
+      item.appendChild(textGroup);
+      item.appendChild(actionsGroup);
+      phraseList.appendChild(item);
+    });
+  }
+
+  // Clear all starred phrases
+  clearStarredBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to clear all saved phrases?')) {
+      chrome.runtime.sendMessage({ action: 'clearStarred' }, (response) => {
+        if (response && response.success) {
+          loadStarredPhrases();
+        } else {
+          console.error('Failed to clear starred phrases:', response ? response.error : 'No response');
+        }
+      });
+    }
+  });
 });

@@ -26,7 +26,7 @@
   // We use a WeakSet to track nodes that are currently translated
   const translatedNodes = new WeakMap(); // Map<TextNode, {original: string, translated: string}>
 
-  // Custom CSS injection for translated text styling
+  // Custom CSS injection for translated text styling and highlight tooltip
   const styleElement = document.createElement('style');
   styleElement.id = 'aura-translate-styles';
   styleElement.textContent = `
@@ -38,6 +38,80 @@
     [data-aura-translated="true"]:hover {
       text-decoration-color: rgba(10, 132, 255, 0.85) !important;
     }
+    .aura-tooltip-container {
+      position: absolute;
+      z-index: 2147483647;
+      background: #1c1c1e;
+      color: #f5f5f7;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+      font-size: 13px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 230px;
+      max-width: 320px;
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      pointer-events: auto;
+      text-align: left;
+    }
+    .aura-tooltip-container.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .aura-tooltip-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+    }
+    .aura-tooltip-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: none;
+      color: #f5f5f7;
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.1s, transform 0.1s;
+    }
+    .aura-tooltip-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .aura-tooltip-btn:active {
+      transform: scale(0.96);
+    }
+    .aura-tooltip-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .aura-tooltip-btn.primary {
+      background: #0a84ff;
+      color: #ffffff;
+    }
+    .aura-tooltip-btn.primary:hover {
+      background: #2997ff;
+    }
+    .aura-tooltip-btn.starred {
+      color: #ffd60a;
+    }
+    .aura-tooltip-result {
+      font-size: 12px;
+      color: #e5e5ea;
+      line-height: 1.45;
+      word-break: break-word;
+      user-select: text;
+    }
   `;
 
   // Initialize content script
@@ -46,6 +120,9 @@
   function init() {
     // Inject custom styles
     document.documentElement.appendChild(styleElement);
+
+    // Set up highlight tooltip selection listener
+    setupSelectionListener();
 
     // Get configuration from storage and check if auto-translate is enabled for this domain
     const domain = window.location.hostname;
@@ -497,5 +574,160 @@
         el.removeAttribute('data-aura-title-added');
       }
     });
+  }
+
+  // Floating Highlight Tooltip UI and Translation Logic
+  let activeTooltip = null;
+
+  function setupSelectionListener() {
+    document.addEventListener('mouseup', handleSelectionMouseUp);
+    document.addEventListener('mousedown', handleSelectionMouseDown);
+  }
+
+  function handleSelectionMouseDown(e) {
+    if (activeTooltip && !activeTooltip.contains(e.target)) {
+      removeTooltip();
+    }
+  }
+
+  function handleSelectionMouseUp(e) {
+    setTimeout(() => {
+      const selection = window.getSelection();
+      if (!selection) return;
+
+      const selectedText = selection.toString().trim();
+      // Length constraints to prevent showing on accidental clicks/massive selects
+      if (selectedText.length < 2 || selectedText.length > 800) {
+        return;
+      }
+
+      if (activeTooltip && activeTooltip.contains(e.target)) {
+        return;
+      }
+
+      if (selection.rangeCount === 0) return;
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      createTooltip(selectedText, rect);
+    }, 10);
+  }
+
+  function createTooltip(text, selectionRect) {
+    removeTooltip();
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'aura-tooltip-container';
+    tooltip.innerHTML = `
+      <div class="aura-tooltip-actions">
+        <button class="aura-tooltip-btn primary" id="aura-btn-trans">🌐 Translate</button>
+        <button class="aura-tooltip-btn" id="aura-btn-tts" title="Listen" disabled>🔊 Speak</button>
+        <button class="aura-tooltip-btn" id="aura-btn-star" title="Save to Phrasebook" disabled>⭐ Save</button>
+      </div>
+      <div class="aura-tooltip-result" id="aura-tooltip-res">Select action above</div>
+    `;
+
+    document.body.appendChild(tooltip);
+    activeTooltip = tooltip;
+
+    const tooltipWidth = 240;
+    const tooltipHeight = 75;
+    
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+
+    let top = selectionRect.top + scrollTop - tooltipHeight - 12;
+    let left = selectionRect.left + scrollLeft + (selectionRect.width / 2) - (tooltipWidth / 2);
+
+    if (top < scrollTop) {
+      top = selectionRect.bottom + scrollTop + 8;
+    }
+    if (left < 10) left = 10;
+    if (left + tooltipWidth > window.innerWidth - 10) {
+      left = window.innerWidth - tooltipWidth - 10;
+    }
+
+    tooltip.style.top = `${top}px`;
+    tooltip.style.left = `${left}px`;
+
+    requestAnimationFrame(() => {
+      tooltip.classList.add('show');
+    });
+
+    let translationResult = '';
+    const transBtn = tooltip.querySelector('#aura-btn-trans');
+    const ttsBtn = tooltip.querySelector('#aura-btn-tts');
+    const starBtn = tooltip.querySelector('#aura-btn-star');
+    const resDiv = tooltip.querySelector('#aura-tooltip-res');
+
+    transBtn.addEventListener('click', async () => {
+      resDiv.textContent = 'Translating...';
+      transBtn.disabled = true;
+
+      chrome.runtime.sendMessage({
+        action: 'translateBatch',
+        texts: [text],
+        sourceLang: sourceLang,
+        targetLang: targetLang
+      }, (response) => {
+        if (response && response.success && response.translations && response.translations[0]) {
+          translationResult = response.translations[0];
+          // Use textContent instead of innerHTML to prevent XSS
+          resDiv.textContent = translationResult;
+          ttsBtn.disabled = false;
+          starBtn.disabled = false;
+        } else {
+          resDiv.textContent = 'Translation failed.';
+          transBtn.disabled = false;
+        }
+      });
+    });
+
+    ttsBtn.addEventListener('click', () => {
+      if (!translationResult) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(translationResult);
+      utterance.lang = targetLang === 'en' ? 'en-US' : targetLang;
+      window.speechSynthesis.speak(utterance);
+    });
+
+    starBtn.addEventListener('click', () => {
+      if (!translationResult) return;
+      
+      const phrase = {
+        originalText: text,
+        translatedText: translationResult,
+        sourceLang: sourceLang,
+        targetLang: targetLang,
+        timestamp: Date.now()
+      };
+
+      chrome.runtime.sendMessage({
+        action: 'addStarred',
+        phrase: phrase
+      }, (response) => {
+        if (response && response.success) {
+          starBtn.classList.add('starred');
+          starBtn.innerHTML = '⭐ Starred';
+          starBtn.disabled = true;
+        } else {
+          console.error("Error saving phrase:", response ? response.error : 'No response');
+        }
+      });
+    });
+  }
+
+  function removeTooltip() {
+    if (activeTooltip) {
+      activeTooltip.classList.remove('show');
+      const tooltip = activeTooltip;
+      activeTooltip = null;
+      setTimeout(() => {
+        if (tooltip.parentNode) {
+          tooltip.parentNode.removeChild(tooltip);
+        }
+      }, 150);
+    }
   }
 })();
