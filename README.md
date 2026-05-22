@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="banner.png" alt="AuraTranslate Banner" width="520" style="border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.3); margin-bottom: 24px; max-width: 100%;">
+  <img src="assets/banner.png" alt="AuraTranslate Banner" width="520" style="border-radius: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.3); margin-bottom: 24px; max-width: 100%;">
 
   # 🌐 AuraTranslate
   
@@ -7,9 +7,9 @@
   
   <p align="center">
     <a href="LICENSE"><img src="https://img.shields.io/github/license/HarshaTheCode/aura-translate?color=0a84ff&style=for-the-badge" alt="GitHub License"></a>
-    <a href="manifest.json"><img src="https://img.shields.io/badge/version-1.2.0-30d158?style=for-the-badge" alt="Extension Version"></a>
-    <a href="manifest.json"><img src="https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Brave-00d2c4?style=for-the-badge" alt="Platform"></a>
-    <a href="popup.css"><img src="https://img.shields.io/badge/design-minimalist--apple-f5f5f7?style=for-the-badge" alt="Design"></a>
+    <a href="src/manifest.json"><img src="https://img.shields.io/badge/version-1.2.0-30d158?style=for-the-badge" alt="Extension Version"></a>
+    <a href="src/manifest.json"><img src="https://img.shields.io/badge/platform-Chrome%20%7C%20Edge%20%7C%20Brave-00d2c4?style=for-the-badge" alt="Platform"></a>
+    <a href="src/popup.css"><img src="https://img.shields.io/badge/design-minimalist--apple-f5f5f7?style=for-the-badge" alt="Design"></a>
   </p>
 </div>
 
@@ -80,7 +80,7 @@ Toggle the **Developer mode** switch in the top-right corner of the Extensions d
 
 ### **Step 4: Load Unpacked Source**
 1. Click the **Load unpacked** button in the top-left corner.
-2. Select the `translator` directory containing this code.
+2. Select the `src` directory inside the cloned `translator` repository.
 
 ### **Step 5: Pin the Extension**
 Click the puzzle piece icon on your browser toolbar and pin **AuraTranslate** for easy setup.
