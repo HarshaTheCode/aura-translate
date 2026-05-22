@@ -24,8 +24,8 @@
   let isProcessingQueue = false;
 
   // Stored references of translated nodes to enable instant restoration
-  // We use a WeakSet to track nodes that are currently translated
-  const translatedNodes = new WeakMap(); // Map<TextNode, {original: string, translated: string}>
+  // We use a WeakMap to track nodes that are currently translated
+  let translatedNodes = new WeakMap(); // Map<TextNode, {original: string, translated: string}>
 
   // Custom CSS injection for translated text styling and highlight tooltip
   const styleElement = document.createElement('style');
@@ -196,13 +196,18 @@
         hoverOriginal = settings.hoverOriginal !== undefined ? settings.hoverOriginal : hoverOriginal;
         bilingualMode = settings.bilingualMode !== undefined ? settings.bilingualMode : bilingualMode;
         
+        const langOrModeChanged = (oldTargetLang !== targetLang || oldSourceLang !== sourceLang || oldBilingualMode !== bilingualMode);
+        if (langOrModeChanged) {
+          translatedNodes = new WeakMap();
+        }
+
         if (isEnabled) {
           // If translation is active, adjust hover styles or languages dynamically
           if (oldHover !== hoverOriginal) {
             updateHoverTooltips();
           }
           // Re-translate page if source/target language or bilingual mode changed
-          if (oldTargetLang !== targetLang || oldSourceLang !== sourceLang || oldBilingualMode !== bilingualMode) {
+          if (langOrModeChanged) {
             disableTranslation();
             enableTranslation(true);
           }
@@ -234,9 +239,12 @@
   }
 
   // Turn translation on
-  // Turn translation on
   function enableTranslation(force = false) {
     if (isEnabled && !force) return;
+    
+    if (force) {
+      translatedNodes = new WeakMap();
+    }
     
     isEnabled = true;
     reportTabState('translating');
@@ -437,6 +445,13 @@
       return;
     }
 
+    // Check if we have the translation cached in memory for instant restore
+    const info = translatedNodes.get(node);
+    if (info && info.original === node.nodeValue) {
+      applySingleTranslation(node, info);
+      return; // Handled instantly, do not queue!
+    }
+
     const parent = node.parentElement;
     if (!parent) {
       activeTranslationQueue.push(node);
@@ -518,6 +533,42 @@
       isProcessingQueue = false;
       reportTabState('ready');
     }
+  }
+
+  // Apply a single cached translation synchronously
+  function applySingleTranslation(node, info) {
+    const originalText = info.original;
+    const translatedText = info.translated;
+    const parent = node.parentElement;
+
+    if (bilingualMode) {
+      if (parent) {
+        parent.setAttribute('data-aura-translated', 'true');
+        parent.setAttribute('data-aura-original', originalText);
+        
+        // Append bilingual span if it doesn't already exist
+        let bilingualSpan = parent.querySelector(':scope > [data-aura-bilingual="true"]');
+        if (!bilingualSpan) {
+          bilingualSpan = document.createElement('span');
+          bilingualSpan.className = 'aura-bilingual-line';
+          bilingualSpan.textContent = translatedText;
+          bilingualSpan.setAttribute('data-aura-bilingual', 'true');
+          parent.appendChild(bilingualSpan);
+        }
+      }
+    } else {
+      node.nodeValue = translatedText;
+      if (parent) {
+        parent.setAttribute('data-aura-translated', 'true');
+        parent.setAttribute('data-aura-original', originalText);
+        
+        if (hoverOriginal) {
+          parent.setAttribute('title', `Original: ${originalText}`);
+          parent.setAttribute('data-aura-title-added', 'true');
+        }
+      }
+    }
+    translatedCount++;
   }
 
   // Apply translated text back to the DOM nodes
@@ -609,7 +660,6 @@
         const info = translatedNodes.get(node);
         if (info) {
           node.nodeValue = info.original;
-          translatedNodes.delete(node);
         }
       }
       
