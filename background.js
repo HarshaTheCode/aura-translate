@@ -130,13 +130,23 @@ async function clearAllStarred() {
   });
 }
 
-// Load cache migration and register context menus on startup
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "translate-page",
-    title: "Translate this page with AuraTranslate",
-    contexts: ["page"]
+// Helper to set up context menus reliably
+function setupContextMenus() {
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: "translate-page",
+      title: "Translate this page with AuraTranslate",
+      contexts: ["page"]
+    });
   });
+}
+
+// Set up context menus on service worker startup/load
+setupContextMenus();
+
+// Load cache migration and register context menus on installation
+chrome.runtime.onInstalled.addListener(() => {
+  setupContextMenus();
 
   chrome.storage.local.get(['translationCache'], (data) => {
     if (data.translationCache) {

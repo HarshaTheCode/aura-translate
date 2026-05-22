@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AuraTranslate - Page Translator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Premium, real-time in-place web page translator. Designed for modern dynamic web applications like Tencent Hunyuan Video.",
   "permissions": [
     "storage",

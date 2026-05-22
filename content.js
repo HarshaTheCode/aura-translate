@@ -44,7 +44,7 @@
       background: #1c1c1e;
       color: #f5f5f7;
       border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
+      border-radius: 16px;
       padding: 10px 14px;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
       font-size: 13px;
@@ -75,7 +75,7 @@
       background: rgba(255, 255, 255, 0.06);
       border: none;
       color: #f5f5f7;
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 5px 9px;
       font-size: 11px;
       font-weight: 500;

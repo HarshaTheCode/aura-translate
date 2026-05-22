@@ -19,8 +19,8 @@
   --text-muted: #6e6e73;      /* SF Pro Muted Text */
   
   --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --radius-lg: 10px;          /* Clean macOS-style corners */
-  --radius-md: 6px;
+  --radius-lg: 14px;          /* Clean macOS-style corners */
+  --radius-md: 8px;
 }
 
 /* Reset and Base Styles */
@@ -87,7 +87,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-secondary);
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: 6px;
   letter-spacing: 0.3px;
 }
 
@@ -222,6 +222,18 @@ body {
 
 .select-wrapper select:focus {
   border-color: var(--primary);
+}
+
+.select-wrapper select option {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.version-badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: 2px;
 }
 
 .swap-icon {

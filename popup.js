@@ -14,6 +14,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const translateBtn = document.getElementById('translateBtn');
   const resetBtn = document.getElementById('resetBtn');
 
+  // Set version text dynamically from manifest
+  const versionText = document.getElementById('versionText');
+  if (versionText) {
+    try {
+      versionText.textContent = 'v' + chrome.runtime.getManifest().version;
+    } catch (e) {
+      versionText.textContent = 'v1.1.0';
+    }
+  }
+
   let activeTab = null;
 
   // Initialize and load saved options
