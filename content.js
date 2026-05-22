@@ -709,7 +709,7 @@
       }, (response) => {
         if (response && response.success) {
           starBtn.classList.add('starred');
-          starBtn.innerHTML = '⭐ Starred';
+          starBtn.textContent = '⭐ Starred';
           starBtn.disabled = true;
         } else {
           console.error("Error saving phrase:", response ? response.error : 'No response');

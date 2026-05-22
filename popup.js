@@ -279,7 +279,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function renderEmptyState() {
-    phraseList.innerHTML = '<div class="empty-state">No saved phrases yet. Highlight text on a page to star and save translations.</div>';
+    phraseList.innerHTML = '';
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
+    emptyState.textContent = 'No saved phrases yet. Highlight text on a page to star and save translations.';
+    phraseList.appendChild(emptyState);
   }
 
   function renderPhraseList(phrases) {
