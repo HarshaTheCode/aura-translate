@@ -13,9 +13,12 @@
   // Translation stats for the current tab
   let translatedCount = 0;
   
-  // DOM Tracking
+  // DOM Tracking & Viewport Observer
   let observer = null;
-  let translationQueue = [];
+  let viewportObserver = null;
+  const observedElements = new WeakSet();
+  let pendingTranslationQueue = [];
+  let activeTranslationQueue = [];
   let queueTimeout = null;
   let isProcessingQueue = false;
 
@@ -137,11 +140,15 @@
   }
 
   // Turn translation on
+  // Turn translation on
   function enableTranslation(force = false) {
     if (isEnabled && !force) return;
     
     isEnabled = true;
     reportTabState('translating');
+
+    // Initialize viewport IntersectionObserver
+    initViewportObserver();
 
     // Safety: If document.body is not ready yet, wait for DOMContentLoaded
     if (!document.body) {
@@ -166,9 +173,15 @@
       observer.disconnect();
       observer = null;
     }
+
+    if (viewportObserver) {
+      viewportObserver.disconnect();
+      viewportObserver = null;
+    }
     
-    // Clear translation queue
-    translationQueue = [];
+    // Clear translation queues
+    pendingTranslationQueue = [];
+    activeTranslationQueue = [];
     if (queueTimeout) {
       clearTimeout(queueTimeout);
       queueTimeout = null;
@@ -181,6 +194,50 @@
     reportTabState('ready');
   }
 
+  // Initialize Viewport IntersectionObserver
+  function initViewportObserver() {
+    if (viewportObserver) return;
+    
+    viewportObserver = new IntersectionObserver((entries) => {
+      let needsProcessing = false;
+      
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const element = entry.target;
+          viewportObserver.unobserve(element);
+          
+          // Move matching text nodes under this parent to active queue
+          const textNodes = findQueuedTextNodesUnder(element);
+          if (textNodes.length > 0) {
+            textNodes.forEach(node => {
+              if (!activeTranslationQueue.includes(node)) {
+                activeTranslationQueue.push(node);
+              }
+              const pIdx = pendingTranslationQueue.indexOf(node);
+              if (pIdx > -1) {
+                pendingTranslationQueue.splice(pIdx, 1);
+              }
+            });
+            needsProcessing = true;
+          }
+        }
+      });
+      
+      if (needsProcessing) {
+        triggerActiveQueueProcessing();
+      }
+    }, {
+      rootMargin: '120px 0px 120px 0px' // pre-translate slightly offscreen for smoothness
+    });
+  }
+
+  // Find all pending text nodes that belong to this observed element
+  function findQueuedTextNodesUnder(element) {
+    return pendingTranslationQueue.filter(node => {
+      return node.parentElement && element.contains(node.parentElement);
+    });
+  }
+
   // Setup MutationObserver for dynamic page components
   function setupMutationObserver() {
     if (observer) observer.disconnect();
@@ -188,17 +245,13 @@
     observer = new MutationObserver((mutations) => {
       if (!isEnabled) return;
       
-      let addedNodesDetected = false;
-      
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
           if (node.nodeType === Node.ELEMENT_NODE) {
             queueNodeForTranslation(node);
-            addedNodesDetected = true;
           } else if (node.nodeType === Node.TEXT_NODE) {
             if (shouldTranslateNode(node)) {
               queueTextNode(node);
-              addedNodesDetected = true;
             }
           }
         }
@@ -208,13 +261,8 @@
           const textNode = mutation.target;
           if (shouldTranslateNode(textNode)) {
             queueTextNode(textNode);
-            addedNodesDetected = true;
           }
         }
-      }
-
-      if (addedNodesDetected) {
-        triggerQueueProcessing();
       }
     });
 
@@ -229,7 +277,6 @@
   function scanAndTranslateDOM(root) {
     if (!root) return;
     queueNodeForTranslation(root);
-    processQueueImmediately();
   }
 
   // Determines if a text node should be translated
@@ -287,13 +334,36 @@
 
   // Queues a single text node
   function queueTextNode(node) {
-    if (!translationQueue.includes(node)) {
-      translationQueue.push(node);
+    if (activeTranslationQueue.includes(node) || pendingTranslationQueue.includes(node)) {
+      return;
+    }
+
+    const parent = node.parentElement;
+    if (!parent) {
+      activeTranslationQueue.push(node);
+      triggerActiveQueueProcessing();
+      return;
+    }
+
+    // Add to pending queue
+    pendingTranslationQueue.push(node);
+    
+    // Start observing parent
+    if (viewportObserver) {
+      if (!observedElements.has(parent)) {
+        observedElements.add(parent);
+        viewportObserver.observe(parent);
+      }
+    } else {
+      // Fallback if observer not set up: translate immediately
+      pendingTranslationQueue.pop();
+      activeTranslationQueue.push(node);
+      triggerActiveQueueProcessing();
     }
   }
 
   // Trigger processing with debounce to batch requests
-  function triggerQueueProcessing() {
+  function triggerActiveQueueProcessing() {
     if (queueTimeout) clearTimeout(queueTimeout);
     queueTimeout = setTimeout(() => {
       processQueueImmediately();
@@ -302,14 +372,14 @@
 
   // Process the translation queue
   async function processQueueImmediately() {
-    if (isProcessingQueue || translationQueue.length === 0) return;
+    if (isProcessingQueue || activeTranslationQueue.length === 0) return;
     
     isProcessingQueue = true;
     reportTabState('translating');
 
     // Retrieve nodes from queue
-    const batchNodes = [...translationQueue];
-    translationQueue = [];
+    const batchNodes = [...activeTranslationQueue];
+    activeTranslationQueue = [];
 
     // Extract texts to translate
     const textsToTranslate = batchNodes.map(node => node.nodeValue);

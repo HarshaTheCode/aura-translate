@@ -4,21 +4,136 @@
 let translationCache = {};
 const CACHE_MAX_SIZE = 5000;
 
-// Load cache from storage on startup
+// IndexedDB Helper Functions
+const DB_NAME = 'AuraTranslateDB';
+const DB_VERSION = 1;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('translations')) {
+        db.createObjectStore('translations');
+      }
+      if (!db.objectStoreNames.contains('phrasebook')) {
+        db.createObjectStore('phrasebook', { keyPath: 'originalText' });
+      }
+    };
+  });
+}
+
+async function getTranslation(key) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('translations', 'readonly');
+    const store = transaction.objectStore('translations');
+    const request = store.get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveTranslation(key, value) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('translations', 'readwrite');
+    const store = transaction.objectStore('translations');
+    const request = store.put(value, key);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function clearAllTranslations() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('translations', 'readwrite');
+    const store = transaction.objectStore('translations');
+    const request = store.clear();
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function getTranslationCount() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('translations', 'readonly');
+    const store = transaction.objectStore('translations');
+    const request = store.count();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Starred Phrasebook Helpers (IndexedDB)
+async function getStarredCount() {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('phrasebook', 'readonly');
+      const store = transaction.objectStore('phrasebook');
+      const request = store.count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.error(e);
+    return 0;
+  }
+}
+
+async function addStarredPhrase(phraseObj) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('phrasebook', 'readwrite');
+    const store = transaction.objectStore('phrasebook');
+    const request = store.put(phraseObj);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function removeStarredPhrase(originalText) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('phrasebook', 'readwrite');
+    const store = transaction.objectStore('phrasebook');
+    const request = store.delete(originalText);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function getStarredPhrases() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction('phrasebook', 'readonly');
+    const store = transaction.objectStore('phrasebook');
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Load cache migration from storage on startup
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get(['translationCache'], (data) => {
     if (data.translationCache) {
-      translationCache = data.translationCache;
-    } else {
-      chrome.storage.local.set({ translationCache: {} });
+      openDB().then(async (db) => {
+        const keys = Object.keys(data.translationCache);
+        for (const key of keys) {
+          await saveTranslation(key, data.translationCache[key]);
+        }
+        chrome.storage.local.remove(['translationCache']);
+      }).catch(err => {
+        console.error("Migration to IndexedDB failed:", err);
+      });
     }
   });
-});
-
-chrome.storage.local.get(['translationCache'], (data) => {
-  if (data.translationCache) {
-    translationCache = data.translationCache;
-  }
 });
 
 // Listener for messages from popup or content script
@@ -37,9 +152,49 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.action === 'clearCache') {
     translationCache = {};
-    chrome.storage.local.set({ translationCache: {} }, () => {
-      sendResponse({ success: true });
-    });
+    clearAllTranslations()
+      .then(() => {
+        chrome.storage.local.remove(['translationCache'], () => {
+          sendResponse({ success: true });
+        });
+      })
+      .catch(err => {
+        console.error("Failed to clear cache:", err);
+        sendResponse({ success: false, error: err.message });
+      });
+    return true;
+  }
+
+  if (request.action === 'getCacheStats') {
+    Promise.all([getTranslationCount(), getStarredCount()])
+      .then(([translationCount, starredCount]) => {
+        sendResponse({ success: true, translationCount, starredCount });
+      })
+      .catch(err => {
+        console.error("Failed to get cache stats:", err);
+        sendResponse({ success: false, error: err.message });
+      });
+    return true;
+  }
+
+  if (request.action === 'addStarred') {
+    addStarredPhrase(request.phrase)
+      .then(() => sendResponse({ success: true }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (request.action === 'removeStarred') {
+    removeStarredPhrase(request.originalText)
+      .then(() => sendResponse({ success: true }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (request.action === 'getStarred') {
+    getStarredPhrases()
+      .then(phrases => sendResponse({ success: true, phrases }))
+      .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
 });
@@ -50,17 +205,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleBatchTranslation(texts, sourceLang, targetLang) {
   const cacheKeyPrefix = `${sourceLang}_${targetLang}_`;
   const results = new Array(texts.length).fill(null);
+
+  // 1. Check cache first (parallel lookup in-memory + IndexedDB)
+  const lookups = await Promise.all(
+    texts.map(async (text) => {
+      const key = cacheKeyPrefix + text;
+      if (translationCache[key]) {
+        return translationCache[key];
+      }
+      try {
+        const cachedVal = await getTranslation(key);
+        if (cachedVal) {
+          translationCache[key] = cachedVal;
+          return cachedVal;
+        }
+      } catch (err) {
+        console.error("IndexedDB cache read error:", err);
+      }
+      return null;
+    })
+  );
+
   const uncachedIndices = [];
   const uncachedTexts = [];
 
-  // 1. Check cache first
-  texts.forEach((text, index) => {
-    const key = cacheKeyPrefix + text;
-    if (translationCache[key]) {
-      results[index] = translationCache[key];
+  lookups.forEach((val, index) => {
+    if (val !== null) {
+      results[index] = val;
     } else {
       uncachedIndices.push(index);
-      uncachedTexts.push(text);
+      uncachedTexts.push(texts[index]);
     }
   });
 
@@ -106,7 +280,7 @@ async function handleBatchTranslation(texts, sourceLang, targetLang) {
   }
 
   // 3. Map translated items back to original results array and update cache
-  let cacheUpdated = false;
+  const dbWritePromises = [];
   uncachedIndices.forEach((originalIndex, i) => {
     const originalText = uncachedTexts[i];
     const translatedText = translatedUncached[i] || originalText;
@@ -116,19 +290,19 @@ async function handleBatchTranslation(texts, sourceLang, targetLang) {
     // Cache the result
     const key = cacheKeyPrefix + originalText;
     translationCache[key] = translatedText;
-    cacheUpdated = true;
+    dbWritePromises.push(saveTranslation(key, translatedText).catch(e => console.error("IndexedDB write error:", e)));
   });
 
-  // Save updated cache to storage if changes were made
-  if (cacheUpdated) {
-    // Keep cache under size limit
-    const cacheKeys = Object.keys(translationCache);
-    if (cacheKeys.length > CACHE_MAX_SIZE) {
-      // Delete oldest 500 entries
-      const keysToDelete = cacheKeys.slice(0, 500);
-      keysToDelete.forEach(k => delete translationCache[k]);
-    }
-    chrome.storage.local.set({ translationCache });
+  if (dbWritePromises.length > 0) {
+    await Promise.all(dbWritePromises);
+  }
+
+  // Keep in-memory cache under size limit
+  const cacheKeys = Object.keys(translationCache);
+  if (cacheKeys.length > CACHE_MAX_SIZE) {
+    // Delete oldest 500 entries
+    const keysToDelete = cacheKeys.slice(0, 500);
+    keysToDelete.forEach(k => delete translationCache[k]);
   }
 
   return results;

@@ -25,19 +25,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Load global configurations
-  chrome.storage.local.get(['sourceLang', 'targetLang', 'autoTranslate', 'hoverOriginal', 'translationCache'], (data) => {
+  chrome.storage.local.get(['sourceLang', 'targetLang', 'autoTranslate', 'hoverOriginal'], (data) => {
     if (data.sourceLang) sourceLangSelect.value = data.sourceLang;
     if (data.targetLang) targetLangSelect.value = data.targetLang;
     if (data.autoTranslate !== undefined) autoTranslateCheck.checked = data.autoTranslate;
     if (data.hoverOriginal !== undefined) hoverOriginalCheck.checked = data.hoverOriginal;
     
-    // Display cache size
-    if (data.translationCache) {
-      statCachedVal.textContent = Object.keys(data.translationCache).length;
-    } else {
-      statCachedVal.textContent = '0';
-    }
+    updateCacheStats();
   });
+
+  function updateCacheStats() {
+    chrome.runtime.sendMessage({ action: 'getCacheStats' }, (response) => {
+      if (response && response.success) {
+        statCachedVal.textContent = response.translationCount;
+      } else {
+        statCachedVal.textContent = '0';
+      }
+    });
+  }
 
   // Load current tab state if available
   if (activeTab && activeTab.url) {
