@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusCard = document.getElementById('statusCard');
   const statusText = document.getElementById('statusText');
   const statusDesc = document.getElementById('statusDesc');
+  const statusBadge = document.getElementById('statusBadge');
   const sourceLangSelect = document.getElementById('sourceLang');
   const targetLangSelect = document.getElementById('targetLang');
   const swapLangsBtn = document.getElementById('swapLangs');
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       powerBtn.disabled = true;
       translateBtn.disabled = true;
       resetBtn.disabled = true;
+      updateStatusBadge(false);
       return;
     }
 
@@ -97,6 +99,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     statusText.textContent = 'No Webpage Found';
     statusDesc.textContent = 'Open a website to translate it';
     powerBtn.disabled = true;
+    updateStatusBadge(false);
+  }
+
+  // Helper to update the status badge
+  function updateStatusBadge(active) {
+    if (!statusBadge) return;
+    if (active) {
+      statusBadge.className = 'status-badge active';
+      const text = statusBadge.querySelector('.badge-text');
+      if (text) text.textContent = 'Active';
+    } else {
+      statusBadge.className = 'status-badge inactive';
+      const text = statusBadge.querySelector('.badge-text');
+      if (text) text.textContent = 'Inactive';
+    }
   }
 
   // Helper to update the UI elements based on state
@@ -106,6 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (enabled) {
       powerBtn.classList.add('active');
       statusCard.className = 'status-card active';
+      updateStatusBadge(true);
       
       if (status === 'translating') {
         statusCard.className = 'status-card translating';
@@ -120,6 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       statusCard.className = 'status-card';
       statusText.textContent = 'Translation Off';
       statusDesc.textContent = 'Tap power button or Translate Page below';
+      updateStatusBadge(false);
     }
   }
 
