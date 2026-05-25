@@ -26,6 +26,10 @@
   "background": {
     "service_worker": "background.js"
   },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
@@ -38,5 +42,19 @@
     "32": "icon32.png",
     "48": "icon48.png",
     "128": "icon128.png"
+  },
+  "commands": {
+    "toggle-translation": {
+      "suggested_key": {
+        "default": "Alt+T"
+      },
+      "description": "Translate this page"
+    },
+    "restore-original": {
+      "suggested_key": {
+        "default": "Alt+R"
+      },
+      "description": "Restore original text"
+    }
   }
 }

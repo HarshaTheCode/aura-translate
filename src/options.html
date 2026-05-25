@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AuraTranslate Options</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 40px;
+      background: #151515;
+      overflow: auto;
+    }
+    .options-container {
+      width: 600px;
+      background: var(--bg-main);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .options-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+    .options-header img {
+      width: 32px;
+      height: 32px;
+    }
+    .options-header h1 {
+      font-size: 20px;
+      color: var(--text-primary);
+    }
+    .setting-group {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+    }
+    .group-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      margin-top: 8px;
+    }
+    .blocklist {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .domain-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+    }
+    .remove-domain {
+      color: var(--danger);
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .danger-zone {
+      border-color: rgba(255, 69, 58, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="options-container">
+    <div class="options-header">
+      <img src="icon128.png" alt="Logo">
+      <h1>AuraTranslate Settings</h1>
+    </div>
+
+    <!-- API Keys -->
+    <div class="setting-group">
+      <div class="group-title">API Key (Bring Your Own Key)</div>
+      <p style="font-size: 12px; color: var(--text-secondary);">By default, AuraTranslate uses a free public Google Translate endpoint. For heavy usage, provide your own Google Cloud Translate API key.</p>
+      <input type="text" id="apiKeyInput" placeholder="AIzaSy...">
+      <button class="btn primary-btn" id="saveKeyBtn" style="margin-top: 12px; width: auto; display: inline-block; padding: 8px 16px;">Save Key</button>
+      <span id="keyStatus" style="font-size: 12px; color: var(--success); margin-left: 10px; display: none;">Saved!</span>
+    </div>
+
+    <!-- Blocklist -->
+    <div class="setting-group">
+      <div class="group-title">Site Blocklist</div>
+      <p style="font-size: 12px; color: var(--text-secondary);">Add domains where AuraTranslate should never run automatically.</p>
+      <div style="display: flex; gap: 8px; margin-top: 8px;">
+        <input type="text" id="domainInput" placeholder="e.g. banking.com" style="margin-top: 0;">
+        <button class="btn primary-btn" id="addDomainBtn" style="width: auto; padding: 0 16px;">Add</button>
+      </div>
+      <div class="blocklist" id="blocklistContainer"></div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="setting-group danger-zone">
+      <div class="group-title" style="color: var(--danger);">Danger Zone</div>
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Clear translation cache to free up space.</p>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn secondary-btn" id="clearCacheBtn" style="color: var(--danger); border-color: var(--danger); width: auto; padding: 8px 16px;">Clear Cache</button>
+      </div>
+    </div>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

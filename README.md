@@ -33,6 +33,10 @@
 | 📁 **IndexedDB Cache** | Database backend to store API key transactions persistently. | Automatic cache expiration keeping storage under 5,000 entries. |
 | 🍏 **Apple HSL Design** | Clean, minimalist interface with a macOS slate-surface look. | Native light/dark theme matching, smooth iOS transitions, and active status indicators. |
 | 🖱️ **Context Menu & TTS** | Translate highlight tooltips with text-to-speech support. | Starred phrasebook integrations with background save features. |
+| ⌨️ **Keyboard Shortcuts** | Native hotkeys to toggle translation or reset original text. | `Alt+T` to toggle translation, `Alt+R` to restore original text instantly. |
+| 🏷️ **Dynamic Badge Count** | Displays live translation statistics on the extension icon badge. | Shows the count of translated DOM elements on the current page. |
+| ⚙️ **Premium Options Page** | Control settings, exclude domains, and configure API integrations. | Includes a Site Blocklist, BYOK (Bring Your Own Key) setup, and cache manager. |
+| 🖱️ **Tooltip Toggle Controls** | Control text-selection behavior via tooltip settings. | Easily enable or disable the "Highlight to Translate" tooltip dynamically from the popup UI. |
 
 ---
 
@@ -106,9 +110,9 @@ The extension is crafted with vanilla technologies to remain lightweight and Ver
 These planned updates represent the upcoming development phases for the codebase:
 
 ```markdown
-- [ ] ⌨️ Custom Keyboard Shortcuts: Custom key bindings (e.g. `Alt+T` for toggle, `Alt+S` for TTS pronunciation).
-- [ ] 🏷️ Dynamic Badge Status: Toolbar icon counts showing live translation statistics for the current page.
-- [ ] 🔑 "Bring Your Own Key" (BYOK) Mode: Secure API key configuration panel for power users to input custom DeepL/OpenAI credentials.
+- [x] ⌨️ Custom Keyboard Shortcuts: Custom key bindings (`Alt+T` to toggle translation, `Alt+R` to restore original text).
+- [x] 🏷️ Dynamic Badge Status: Toolbar icon badge displaying live translation statistics for the current page.
+- [x] 🔑 "Bring Your Own Key" (BYOK) Mode: Secure configuration panel for options, site blocklist, and API credentials.
 - [ ] 🤖 LLM Translation Engines: Multi-engine support to translate using context-aware AI models (OpenAI, Gemini, Claude).
 - [ ] 🗃️ Cloud Starred Phrasebook: Syncing saved translations across multiple browser instances.
 ```

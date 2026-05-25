@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const autoTranslateCheck = document.getElementById('autoTranslate');
   const bilingualModeCheck = document.getElementById('bilingualMode');
   const hoverOriginalCheck = document.getElementById('hoverOriginal');
+  const showTooltipCheck = document.getElementById('showTooltip');
   const statTranslatedVal = document.getElementById('statTranslated');
   const statCachedVal = document.getElementById('statCached');
   const translateBtn = document.getElementById('translateBtn');
@@ -37,12 +38,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Load global configurations
-  chrome.storage.local.get(['sourceLang', 'targetLang', 'autoTranslate', 'bilingualMode', 'hoverOriginal'], (data) => {
+  chrome.storage.local.get(['sourceLang', 'targetLang', 'autoTranslate', 'bilingualMode', 'hoverOriginal', 'showTooltip'], (data) => {
     if (data.sourceLang) sourceLangSelect.value = data.sourceLang;
     if (data.targetLang) targetLangSelect.value = data.targetLang;
     if (data.autoTranslate !== undefined) autoTranslateCheck.checked = data.autoTranslate;
     if (data.bilingualMode !== undefined) bilingualModeCheck.checked = data.bilingualMode;
     if (data.hoverOriginal !== undefined) hoverOriginalCheck.checked = data.hoverOriginal;
+    if (data.showTooltip !== undefined) showTooltipCheck.checked = data.showTooltip;
     
     updateCacheStats();
   });
@@ -258,7 +260,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       targetLang: targetLangSelect.value,
       autoTranslate: autoTranslateCheck.checked,
       bilingualMode: bilingualModeCheck.checked,
-      hoverOriginal: hoverOriginalCheck.checked
+      hoverOriginal: hoverOriginalCheck.checked,
+      showTooltip: showTooltipCheck.checked
     });
     
     // Notify active tab about configuration changes
@@ -270,7 +273,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           targetLang: targetLangSelect.value,
           autoTranslate: autoTranslateCheck.checked,
           bilingualMode: bilingualModeCheck.checked,
-          hoverOriginal: hoverOriginalCheck.checked
+          hoverOriginal: hoverOriginalCheck.checked,
+          showTooltip: showTooltipCheck.checked
         }
       }).catch(() => {});
     }
@@ -291,6 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   hoverOriginalCheck.addEventListener('change', saveSettings);
   bilingualModeCheck.addEventListener('change', saveSettings);
+  showTooltipCheck.addEventListener('change', saveSettings);
 
   // Tab elements
   const tabBtnTranslate = document.getElementById('tabBtnTranslate');

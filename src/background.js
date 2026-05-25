@@ -192,6 +192,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       chrome.storage.local.set({
         [`tabState_${sender.tab.id}`]: request.state
       });
+      
+      if (request.state.enabled && request.state.translatedCount > 0) {
+        chrome.action.setBadgeText({
+          tabId: sender.tab.id,
+          text: request.state.translatedCount.toString()
+        });
+        chrome.action.setBadgeBackgroundColor({
+          tabId: sender.tab.id,
+          color: '#0a84ff'
+        });
+      } else {
+        chrome.action.setBadgeText({
+          tabId: sender.tab.id,
+          text: ''
+        });
+      }
     }
     return false;
   }
@@ -461,3 +477,34 @@ async function translateTextList(texts, sourceLang, targetLang) {
     throw error;
   }
 }
+
+// Keyboard commands listener
+chrome.commands.onCommand.addListener((command) => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const activeTab = tabs[0];
+    if (!activeTab || !activeTab.id) return;
+    
+    if (command === "toggle-translation") {
+      chrome.tabs.sendMessage(activeTab.id, {
+        action: "enableTranslation",
+        force: false
+      }).catch(err => {
+        chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          files: ['content.js']
+        }).then(() => {
+          setTimeout(() => {
+            chrome.tabs.sendMessage(activeTab.id, {
+              action: "enableTranslation",
+              force: false
+            }).catch(e => console.error(e));
+          }, 120);
+        }).catch(e => console.error(e));
+      });
+    } else if (command === "restore-original") {
+      chrome.tabs.sendMessage(activeTab.id, {
+        action: "disableTranslation"
+      }).catch(e => console.error(e));
+    }
+  });
+});

@@ -10,6 +10,7 @@
   let targetLang = 'en';
   let hoverOriginal = true;
   let bilingualMode = false;
+  let showTooltip = true;
   
   // Translation stats for the current tab
   let translatedCount = 0;
@@ -151,12 +152,14 @@
       'autoTranslate',
       'bilingualMode',
       'hoverOriginal',
+      'showTooltip',
       `auto_${domain}`
     ], (data) => {
       if (data.sourceLang) sourceLang = data.sourceLang;
       if (data.targetLang) targetLang = data.targetLang;
       if (data.hoverOriginal !== undefined) hoverOriginal = data.hoverOriginal;
       if (data.bilingualMode !== undefined) bilingualMode = data.bilingualMode;
+      if (data.showTooltip !== undefined) showTooltip = data.showTooltip;
       
       const isAutoForDomain = data[`auto_${domain}`] || false;
       const isGlobalAuto = data.autoTranslate || false;
@@ -195,6 +198,7 @@
         const oldHover = hoverOriginal;
         hoverOriginal = settings.hoverOriginal !== undefined ? settings.hoverOriginal : hoverOriginal;
         bilingualMode = settings.bilingualMode !== undefined ? settings.bilingualMode : bilingualMode;
+        showTooltip = settings.showTooltip !== undefined ? settings.showTooltip : showTooltip;
         
         const langOrModeChanged = (oldTargetLang !== targetLang || oldSourceLang !== sourceLang || oldBilingualMode !== bilingualMode);
         if (langOrModeChanged) {
@@ -688,6 +692,7 @@
   }
 
   function handleSelectionMouseUp(e) {
+    if (!showTooltip) return;
     setTimeout(() => {
       const selection = window.getSelection();
       if (!selection) return;
